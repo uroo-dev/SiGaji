@@ -19,6 +19,10 @@ return new class extends Migration
             $table->time('clock_out')->nullable();
             $table->integer('late_minutes')->default(0);
             $table->enum('status', ['present', 'late', 'absent', 'leave'])->default('present');
+            $table->decimal('latitude', 10, 8)->nullable();
+            $table->decimal('longitude', 11, 8)->nullable();
+            $table->string('photo_path')->nullable(); // Menyimpan path foto
+            $table->integer('distance_from_office')->nullable(); // Jarak dalam meter
             $table->foreignId('corrected_by')->nullable()->constrained('users')->nullOnDelete();
             $table->text('correction_reason')->nullable();
             $table->timestamps();

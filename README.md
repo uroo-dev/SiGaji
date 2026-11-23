@@ -170,6 +170,10 @@ erDiagram
         time clock_out
         int late_minutes
         enum status "present, late, absent, leave"
+        decimal latitude
+        decimal longitude
+        string photo_path
+        int distance_from_office
         bigint corrected_by FK
         text correction_reason
         timestamp created_at

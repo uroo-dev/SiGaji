@@ -29,6 +29,10 @@ class Attendance extends Model
         'clock_out',
         'late_minutes',
         'status',
+        'latitude',
+        'longitude',
+        'photo_path',
+        'distance_from_office',
         'corrected_by',
         'correction_reason',
     ];
@@ -43,6 +47,9 @@ class Attendance extends Model
         return [
             'date' => 'date',
             'late_minutes' => 'integer',
+            'latitude' => 'float',
+            'longitude' => 'float',
+            'distance_from_office' => 'integer',
         ];
     }
 

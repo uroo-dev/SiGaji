@@ -3,16 +3,18 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, SoftDeletes;
 
     /**
      * The table associated with the model.
@@ -35,6 +37,7 @@ class User extends Authenticatable
         'is_active',
         'standard_clock_in',
         'annual_leave_quota',
+        'joined_at',
     ];
 
     /**
@@ -57,10 +60,21 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'role' => UserRole::class,
             'is_active' => 'boolean',
             'base_salary' => 'decimal:2',
             'annual_leave_quota' => 'integer',
+            'joined_at' => 'date',
         ];
+    }
+
+    /**
+     * Scope query berdasarkan role user.
+     */
+    public function scopeRole($query, UserRole|string $role)
+    {
+        $roleValue = $role instanceof UserRole ? $role->value : $role;
+        return $query->where('role', $roleValue);
     }
 
     /**

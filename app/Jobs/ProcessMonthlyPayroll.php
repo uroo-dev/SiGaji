@@ -1,0 +1,110 @@
+<?php
+
+namespace App\Jobs;
+
+use App\Enums\AttendanceStatus;
+use App\Enums\PayslipStatus;
+use App\Enums\UserRole;
+use App\Models\Attendance;
+use App\Models\LeaveRequest;
+use App\Models\OvertimeRequest;
+use App\Models\Payslip;
+use App\Models\PayslipItem;
+use App\Models\User;
+use App\Services\SettingService;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Cache;
+
+class ProcessMonthlyPayroll implements ShouldQueue
+{
+    use Queueable;
+
+    /**
+     * Create a new job instance.
+     */
+    public function __construct(public string $period) {}
+
+    /**
+     * Execute the job.
+     */
+    public function handle(SettingService $settingService): void
+    {
+        $employees = User::role(UserRole::EMPLOYEE)->where('is_active', true)->get();
+        $total = $employees->count();
+
+        Cache::put("payroll.progress.{$this->period}", [
+            'total' => $total,
+            'completed' => 0,
+            'status' => 'processing',
+        ], 3600);
+
+        $lateRatePerMinute = (float) $settingService->get('late_deduction_per_minute', 1000);
+        $completed = 0;
+
+        foreach ($employees as $employee) {
+            // Cek apakah slip gaji sudah final
+            $existing = Payslip::where('user_id', $employee->id)->where('period', $this->period)->first();
+            if ($existing && $existing->status === PayslipStatus::FINAL) {
+                $completed++;
+                continue;
+            }
+
+            // Hitung keterlambatan di periode terkait
+            $totalLateMinutes = Attendance::where('user_id', $employee->id)
+                ->where('date', 'like', "{$this->period}%")
+                ->sum('late_minutes');
+
+            $lateDeduction = $totalLateMinutes * $lateRatePerMinute;
+
+            // Hitung lembur disetujui di periode terkait (cth: Rp 25.000 / jam)
+            $totalOvertimeHours = OvertimeRequest::where('user_id', $employee->id)
+                ->where('date', 'like', "{$this->period}%")
+                ->where('status', 'approved')
+                ->sum('hours');
+
+            $hourlyOvertimeRate = (float) $settingService->get('overtime_hourly_rate', 25000);
+            $overtimePay = $totalOvertimeHours * $hourlyOvertimeRate;
+
+            // Hitung potongan cuti tanpa gaji (unpaid)
+            $unpaidDays = LeaveRequest::where('user_id', $employee->id)
+                ->where('type', 'unpaid')
+                ->where('status', 'approved')
+                ->where('start_date', 'like', "{$this->period}%")
+                ->sum('total_days');
+
+            $dailySalary = $employee->base_salary > 0 ? ($employee->base_salary / 22) : 0;
+            $leaveDeduction = round($unpaidDays * $dailySalary);
+
+            $netSalary = max(0, $employee->base_salary + $overtimePay - $lateDeduction - $leaveDeduction);
+
+            $payslip = Payslip::updateOrCreate(
+                ['user_id' => $employee->id, 'period' => $this->period],
+                [
+                    'base_salary' => $employee->base_salary,
+                    'overtime_pay' => $overtimePay,
+                    'late_deduction' => $lateDeduction,
+                    'leave_deduction' => $leaveDeduction,
+                    'net_salary' => $netSalary,
+                    'status' => PayslipStatus::DRAFT,
+                ]
+            );
+
+            // Re-generate rincian item slip gaji
+            $payslip->items()->delete();
+            $payslip->items()->createMany([
+                ['component' => 'Gaji Pokok', 'amount' => $employee->base_salary, 'type' => 'earning'],
+                ['component' => "Uang Lembur ({$totalOvertimeHours} jam)", 'amount' => $overtimePay, 'type' => 'earning'],
+                ['component' => "Potongan Terlambat ({$totalLateMinutes} menit)", 'amount' => $lateDeduction, 'type' => 'deduction'],
+                ['component' => "Potongan Unpaid Leave ({$unpaidDays} hari)", 'amount' => $leaveDeduction, 'type' => 'deduction'],
+            ]);
+
+            $completed++;
+            Cache::put("payroll.progress.{$this->period}", [
+                'total' => $total,
+                'completed' => $completed,
+                'status' => $completed >= $total ? 'done' : 'processing',
+            ], 3600);
+        }
+    }
+}

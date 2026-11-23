@@ -29,7 +29,7 @@ class AttendanceController extends Controller
                 return response()->json(['message' => 'Clock-in berhasil!']);
             }
 
-            return redirect()->route('employee.dashboard')->with('success', 'Clock-in berhasil!');
+            return redirect()->route('employee.attendances.index')->with('success', 'Clock-in berhasil!');
         } catch (AlreadyClockedInException $e) {
             if ($request->wantsJson()) {
                 return response()->json(['message' => $e->getMessage()], 422);
@@ -50,16 +50,18 @@ class AttendanceController extends Controller
     public function clockOut(Request $request)
     {
         try {
-            $this->service->clockOut(Auth::user());
+            $this->service->clockOut(Auth::user(), $request->all());
 
             if ($request->wantsJson()) {
                 return response()->json(['message' => 'Clock-out berhasil!']);
             }
 
-            return redirect()->route('employee.dashboard')->with('success', 'Clock-out berhasil!');
+            return redirect()->route('employee.attendances.index')->with('success', 'Clock-out berhasil!');
         } catch (ValidationException $e) {
+            $msg = implode(', ', array_merge(...array_values($e->errors())));
+
             if ($request->wantsJson()) {
-                return response()->json(['message' => implode(', ', array_merge(...array_values($e->errors())))], 422);
+                return response()->json(['message' => $msg], 422);
             }
 
             return back()->withErrors($e->errors());
@@ -68,10 +70,10 @@ class AttendanceController extends Controller
 
     public function history(Request $request)
     {
-        $attendances = Attendance::where('user_id', Auth::id())
-            ->latest('date')
-            ->paginate(15);
+        $today = Auth::user()->attendances()->whereDate('date', today())->first();
+        $history = Auth::user()->attendances()->latest('date')->limit(30)->get();
+        $attendances = $history;
 
-        return view('employee.attendances.index', compact('attendances'));
+        return view('employee.attendances.index', compact('today', 'history', 'attendances'));
     }
 }

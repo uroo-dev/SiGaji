@@ -1,4 +1,7 @@
 <x-layouts.app title="Approval Lembur">
+    @php
+        $routePrefix = auth()->user()?->role?->value === 'admin' ? 'admin' : 'supervisor';
+    @endphp
     <div x-data="{ rejectModal: false, selectedOt: null, rejectReason: '' }">
         <x-page-header title="Approval Lembur" subtitle="Tinjau dan setujui pengajuan lembur karyawan." />
 
@@ -29,7 +32,7 @@
                                     class="px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-medium hover:bg-green-700 flex items-center gap-1.5 shadow-sm transition-all">
                                 <i class="ph ph-check text-base"></i> Setujui
                             </button>
-                            <form id="approve-ot-{{ $ot->id }}" method="POST" action="{{ route('supervisor.overtime.approve', $ot) }}" class="hidden">
+                            <form id="approve-ot-{{ $ot->id }}" method="POST" action="{{ route($routePrefix . '.overtime.approve', $ot) }}" class="hidden">
                                 @csrf
                             </form>
 
@@ -66,7 +69,7 @@
                     </button>
                 </div>
 
-                <form :action="selectedOt ? `/supervisor/overtime/${selectedOt.id}/reject` : '#'" method="POST" class="space-y-4">
+                <form :action="selectedOt ? `/${'{{ $routePrefix }}'}/overtime-approvals/${selectedOt.id}/reject` : '#'" method="POST" class="space-y-4">
                     @csrf
                     <div>
                         <label class="text-xs font-semibold text-gray-700 block mb-1">Alasan Penolakan (Wajib)</label>

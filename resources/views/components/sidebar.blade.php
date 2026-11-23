@@ -3,25 +3,29 @@
     $roleVal = $user?->role instanceof \App\Enums\UserRole ? $user->role->value : ($user?->role ?? 'employee');
     $menuItems = match($roleVal) {
         'admin' => [
-            ['route' => 'admin.dashboard', 'label' => 'Dashboard', 'icon' => 'ph-squares-four'],
-            ['route' => 'admin.employees.index', 'label' => 'Karyawan', 'icon' => 'ph-users'],
-            ['route' => 'admin.attendances.index', 'label' => 'Absensi', 'icon' => 'ph-calendar-check'],
-            ['route' => 'admin.payroll.index', 'label' => 'Payroll', 'icon' => 'ph-money'],
-            ['route' => 'admin.audit-logs.index', 'label' => 'Audit Log', 'icon' => 'ph-shield-check'],
-            ['route' => 'admin.settings.index', 'label' => 'Pengaturan', 'icon' => 'ph-gear'],
+            ['route' => 'admin.dashboard',         'label' => 'Dashboard',        'icon' => 'ph-squares-four'],
+            ['route' => 'admin.employees.index',   'label' => 'Data Karyawan',    'icon' => 'ph-users'],
+            ['route' => 'admin.attendances.index', 'label' => 'Absensi',          'icon' => 'ph-calendar-check'],
+            ['route' => 'admin.overtime.index',    'label' => 'Approval Lembur',  'icon' => 'ph-hourglass-high'],
+            ['route' => 'admin.leave.index',       'label' => 'Approval Cuti',    'icon' => 'ph-airplane-tilt'],
+            ['route' => 'admin.payroll.index',     'label' => 'Payroll',          'icon' => 'ph-money'],
+            ['route' => 'admin.reports.index',     'label' => 'Laporan',          'icon' => 'ph-chart-bar'],
+            ['route' => 'admin.audit-logs.index',  'label' => 'Audit Log',        'icon' => 'ph-shield-check'],
+            ['route' => 'admin.settings.index',    'label' => 'Pengaturan',       'icon' => 'ph-gear'],
         ],
         'supervisor' => [
-            ['route' => 'supervisor.dashboard', 'label' => 'Dashboard', 'icon' => 'ph-squares-four'],
-            ['route' => 'supervisor.overtime.index', 'label' => 'Approval Lembur', 'icon' => 'ph-hourglass-high'],
-            ['route' => 'supervisor.leave.index', 'label' => 'Approval Cuti', 'icon' => 'ph-airplane-tilt'],
+            ['route' => 'supervisor.dashboard',      'label' => 'Dashboard',        'icon' => 'ph-squares-four'],
+            ['route' => 'supervisor.overtime.index', 'label' => 'Approval Lembur',  'icon' => 'ph-hourglass-high'],
+            ['route' => 'supervisor.leave.index',    'label' => 'Approval Cuti',    'icon' => 'ph-airplane-tilt'],
         ],
-        default => [
-            ['route' => 'employee.dashboard', 'label' => 'Dashboard', 'icon' => 'ph-squares-four'],
-            ['route' => 'employee.attendances.index', 'label' => 'Riwayat Absensi', 'icon' => 'ph-calendar-check'],
-            ['route' => 'employee.overtimes.index', 'label' => 'Lembur', 'icon' => 'ph-hourglass-high'],
-            ['route' => 'employee.leaves.index', 'label' => 'Cuti', 'icon' => 'ph-airplane-tilt'],
-            ['route' => 'employee.payslips.index', 'label' => 'Slip Gaji', 'icon' => 'ph-file-text'],
+        'employee' => [
+            ['route' => 'employee.dashboard',        'label' => 'Dashboard',        'icon' => 'ph-squares-four'],
+            ['route' => 'employee.attendances.index','label' => 'Absensi Saya',     'icon' => 'ph-camera'],
+            ['route' => 'employee.overtimes.index',  'label' => 'Lembur Saya',      'icon' => 'ph-hourglass-high'],
+            ['route' => 'employee.leaves.index',     'label' => 'Cuti Saya',        'icon' => 'ph-airplane-tilt'],
+            ['route' => 'employee.payslips.index',   'label' => 'Slip Gaji',        'icon' => 'ph-file-text'],
         ],
+        default => [],
     };
 @endphp
 
@@ -46,7 +50,7 @@
     </button>
 
     {{-- Logo --}}
-    <div class="flex items-center px-4 mb-8 cursor-pointer" onclick="window.location='{{ route($roleVal . '.dashboard') }}'">
+    <div class="flex items-center px-4 mb-6 cursor-pointer" onclick="window.location='{{ route($roleVal . '.dashboard') }}'">
         <div class="w-10 h-10 min-w-[40px] rounded-xl bg-brand flex items-center justify-center text-white shadow-lg shadow-brand/30">
             <i class="ph-bold ph-wallet text-xl"></i>
         </div>
@@ -54,12 +58,14 @@
     </div>
 
     {{-- Menu Items --}}
-    <nav class="flex-1 flex flex-col gap-1 w-full px-3">
+    <nav class="flex-1 flex flex-col gap-1 w-full px-3 overflow-y-auto">
         @foreach($menuItems as $item)
-            @php $isActive = request()->routeIs($item['route'] . '*'); @endphp
+            @php 
+                $isActive = request()->routeIs($item['route']) || request()->routeIs(str_replace('.index', '.*', $item['route'])); 
+            @endphp
             <a href="{{ route($item['route']) }}" 
                :title="sidebarOpen ? '' : '{{ $item['label'] }}'"
-               class="w-full h-12 rounded-xl flex items-center px-3 transition-colors
+               class="w-full h-11 rounded-xl flex items-center px-3 transition-colors
                       {{ $isActive ? 'bg-brand text-white shadow-md shadow-brand/20' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100' }}">
                 <i class="ph {{ $item['icon'] }} text-xl min-w-[24px]"></i>
                 <span x-show="sidebarOpen" x-transition.opacity class="ml-3 text-sm font-medium whitespace-nowrap">{{ $item['label'] }}</span>
@@ -72,7 +78,7 @@
         <form method="POST" action="{{ route('logout') }}">
             @csrf
             <button type="submit" :title="sidebarOpen ? '' : 'Keluar'"
-                    class="w-full h-12 rounded-xl flex items-center px-3 text-gray-500 hover:text-red-500 hover:bg-red-50 transition-colors">
+                    class="w-full h-11 rounded-xl flex items-center px-3 text-gray-500 hover:text-red-500 hover:bg-red-50 transition-colors">
                 <i class="ph ph-sign-out text-xl min-w-[24px]"></i>
                 <span x-show="sidebarOpen" x-transition.opacity class="ml-3 text-sm font-medium whitespace-nowrap">Keluar</span>
             </button>

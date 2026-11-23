@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Admin\PayrollController;
+use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Employee\AttendanceController as EmployeeAttendanceController;
@@ -46,6 +47,19 @@ Route::middleware(['auth', 'role.admin'])->prefix('admin')->name('admin.')->grou
     
     Route::get('/attendances', [AdminAttendanceController::class, 'index'])->name('attendances.index');
     Route::post('/attendances/{attendance}/correct', [AdminAttendanceController::class, 'correct'])->name('attendances.correct');
+    
+    // Admin Approval Lembur & Cuti
+    Route::get('/overtime-approvals', [OvertimeApprovalController::class, 'index'])->name('overtime.index');
+    Route::post('/overtime-approvals/{overtime}/approve', [OvertimeApprovalController::class, 'approve'])->name('overtime.approve');
+    Route::post('/overtime-approvals/{overtime}/reject', [OvertimeApprovalController::class, 'reject'])->name('overtime.reject');
+    
+    Route::get('/leave-approvals', [LeaveApprovalController::class, 'index'])->name('leave.index');
+    Route::post('/leave-approvals/{leave}/approve', [LeaveApprovalController::class, 'approve'])->name('leave.approve');
+    Route::post('/leave-approvals/{leave}/reject', [LeaveApprovalController::class, 'reject'])->name('leave.reject');
+    
+    // Laporan
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('/reports/payroll', [ReportController::class, 'payroll'])->name('reports.payroll');
     
     Route::get('/payroll', [PayrollController::class, 'index'])->name('payroll.index');
     Route::post('/payroll/generate', [PayrollController::class, 'generate'])->name('payroll.generate');

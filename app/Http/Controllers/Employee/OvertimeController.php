@@ -31,6 +31,10 @@ class OvertimeController extends Controller
         $start = Carbon::parse($validated['date'] . ' ' . $validated['start_time']);
         $end = Carbon::parse($validated['date'] . ' ' . $validated['end_time']);
         
+        if ($end->lessThan($start)) {
+            $end->addDay();
+        }
+
         $hours = max(0.5, round($start->diffInMinutes($end) / 60, 2));
 
         OvertimeRequest::create([
@@ -43,7 +47,7 @@ class OvertimeController extends Controller
             'status' => 'pending',
         ]);
 
-        return back()->with('success', 'Pengajuan lembur berhasil dikirim.');
+        return redirect()->route('employee.overtimes.index')->with('success', 'Pengajuan lembur berhasil dikirim.');
     }
 
     public function cancel(OvertimeRequest $overtime)

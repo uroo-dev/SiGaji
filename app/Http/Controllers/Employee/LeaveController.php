@@ -46,6 +46,6 @@ class LeaveController extends Controller
             'status' => 'pending',
         ]);
 
-        return back()->with('success', 'Permohonan cuti berhasil diajukan.');
+        return redirect()->route('employee.leaves.index')->with('success', 'Permohonan cuti berhasil diajukan.');
     }
 }

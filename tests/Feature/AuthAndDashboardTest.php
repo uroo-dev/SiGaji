@@ -25,7 +25,10 @@ class AuthAndDashboardTest extends TestCase
             'admin.dashboard',
             'admin.employees.index',
             'admin.attendances.index',
+            'admin.overtime.index',
+            'admin.leave.index',
             'admin.payroll.index',
+            'admin.reports.index',
             'admin.settings.index',
             'admin.audit-logs.index',
         ];
@@ -34,6 +37,14 @@ class AuthAndDashboardTest extends TestCase
             $response = $this->actingAs($admin)->get(route($route));
             $response->assertStatus(200);
         }
+    }
+
+    public function test_admin_can_download_payroll_recap_excel()
+    {
+        $admin = User::where('email', 'admin@sigaji.test')->first();
+        $response = $this->actingAs($admin)->get(route('admin.reports.payroll', ['period' => '2026-11']));
+        $response->assertStatus(200);
+        $response->assertHeader('content-type', 'text/csv; charset=UTF-8');
     }
 
     public function test_supervisor_can_access_all_supervisor_views()

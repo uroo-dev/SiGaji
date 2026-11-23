@@ -24,7 +24,7 @@ class AttendanceService
             throw new AlreadyClockedInException('Anda sudah melakukan clock-in hari ini.');
         }
 
-        // Ambil setting radius dari Redis
+        // Ambil setting radius dari SettingService
         $officeLat = (float) $this->settingService->get('office_latitude', -6.917464);
         $officeLng = (float) $this->settingService->get('office_longitude', 107.619123);
         $maxRadius = (int) $this->settingService->get('max_radius_meters', 100);
@@ -34,12 +34,12 @@ class AttendanceService
         // Guard 2: Validasi Radius
         if ($distance > $maxRadius) {
             throw ValidationException::withMessages([
-                'radius' => "Anda berada di luar radius kantor. Jarak Anda: " . round($distance) . "m (Maks: {$maxRadius}m)."
+                'radius' => "Anda berada di luar radius kantor. Jarak Anda: " . round($distance) . "m (Maksimal: {$maxRadius}m)."
             ]);
         }
 
-        // Simpan Foto
-        $photoPath = $this->storeBase64Photo($data['photo_base64'], $user->id);
+        // Simpan Foto Clock-In
+        $photoPath = $this->storeBase64Photo($data['photo_base64'], $user->id, 'clock-in');
 
         // Hitung Keterlambatan
         $now = now();
@@ -63,12 +63,12 @@ class AttendanceService
         return $attendance;
     }
 
-    public function clockOut(User $user): Attendance
+    public function clockOut(User $user, array $data = []): Attendance
     {
         $today = now()->toDateString();
 
         $attendance = Attendance::where('user_id', $user->id)
-            ->where('date', $today)
+            ->whereDate('date', $today)
             ->first();
 
         if (! $attendance) {
@@ -81,6 +81,26 @@ class AttendanceService
             throw ValidationException::withMessages([
                 'clock_out' => 'Anda sudah melakukan clock-out hari ini.',
             ]);
+        }
+
+        // Validasi radius jika koordinat disediakan
+        if (isset($data['latitude'], $data['longitude'])) {
+            $officeLat = (float) $this->settingService->get('office_latitude', -6.917464);
+            $officeLng = (float) $this->settingService->get('office_longitude', 107.619123);
+            $maxRadius = (int) $this->settingService->get('max_radius_meters', 100);
+
+            $distance = $this->calculateDistance($officeLat, $officeLng, (float) $data['latitude'], (float) $data['longitude']);
+
+            if ($distance > $maxRadius) {
+                throw ValidationException::withMessages([
+                    'radius' => "Anda berada di luar radius kantor saat clock-out. Jarak: " . round($distance) . "m (Maksimal: {$maxRadius}m).",
+                ]);
+            }
+        }
+
+        // Simpan foto clock-out jika disertakan
+        if (!empty($data['photo_base64'])) {
+            $this->storeBase64Photo($data['photo_base64'], $user->id, 'clock-out');
         }
 
         $attendance->update([
@@ -106,7 +126,7 @@ class AttendanceService
         return $earthRadius * 2 * atan2(sqrt($a), sqrt(1 - $a));
     }
 
-    private function storeBase64Photo(string $base64String, int $userId): string
+    private function storeBase64Photo(string $base64String, int $userId, string $type = 'clock-in'): string
     {
         if (str_contains($base64String, ';base64,')) {
             $imageParts = explode(";base64,", $base64String);
@@ -118,7 +138,7 @@ class AttendanceService
             $imageBase64 = base64_decode($base64String);
         }
         
-        $fileName = 'attendances/' . $userId . '_' . now()->format('Ymd_His') . '.' . $imageType;
+        $fileName = 'attendances/' . $userId . '_' . $type . '_' . now()->format('Ymd_His') . '.' . $imageType;
         Storage::disk('public')->put($fileName, $imageBase64);
         
         return $fileName;

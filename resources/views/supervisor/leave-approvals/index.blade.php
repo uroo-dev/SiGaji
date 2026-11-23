@@ -1,4 +1,7 @@
 <x-layouts.app title="Approval Cuti">
+    @php
+        $routePrefix = auth()->user()?->role?->value === 'admin' ? 'admin' : 'supervisor';
+    @endphp
     <div x-data="{ rejectModal: false, selectedLeave: null, rejectReason: '' }">
         <x-page-header title="Approval Cuti" subtitle="Tinjau dan setujui pengajuan cuti karyawan." />
 
@@ -34,7 +37,7 @@
                                     class="px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-medium hover:bg-green-700 flex items-center gap-1.5 shadow-sm transition-all">
                                 <i class="ph ph-check text-base"></i> Setujui
                             </button>
-                            <form id="approve-leave-{{ $leave->id }}" method="POST" action="{{ route('supervisor.leave.approve', $leave) }}" class="hidden">
+                            <form id="approve-leave-{{ $leave->id }}" method="POST" action="{{ route($routePrefix . '.leave.approve', $leave) }}" class="hidden">
                                 @csrf
                             </form>
 
@@ -71,7 +74,7 @@
                     </button>
                 </div>
 
-                <form :action="selectedLeave ? `/supervisor/leave/${selectedLeave.id}/reject` : '#'" method="POST" class="space-y-4">
+                <form :action="selectedLeave ? `/${'{{ $routePrefix }}'}/leave-approvals/${selectedLeave.id}/reject` : '#'" method="POST" class="space-y-4">
                     @csrf
                     <div>
                         <label class="text-xs font-semibold text-gray-700 block mb-1">Alasan Penolakan (Wajib)</label>

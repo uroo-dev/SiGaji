@@ -15,12 +15,11 @@
                     @else
                         <span class="bg-white/20 px-3 py-1 rounded-full text-xs font-medium">Tepat Waktu</span>
                     @endif
-                    <form method="POST" action="{{ route('employee.attendance.clock-out') }}" class="mt-6">
-                        @csrf
-                        <button class="bg-white text-brand px-6 py-2.5 rounded-full font-bold hover:bg-gray-100 shadow-md transition-colors">
-                            <i class="ph ph-sign-out mr-1"></i> Clock Out Sekarang
-                        </button>
-                    </form>
+                    <div class="mt-6">
+                        <a href="{{ route('employee.attendances.index') }}" class="bg-white text-brand px-6 py-2.5 rounded-full font-bold hover:bg-gray-100 shadow-md transition-all inline-flex items-center gap-2">
+                            <i class="ph ph-camera text-lg"></i> Buka Kamera & Clock Out
+                        </a>
+                    </div>
                 </div>
             @elseif($todayAttendance && $todayAttendance->clock_out)
                 {{-- Sudah Selesai --}}

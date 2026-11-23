@@ -103,8 +103,15 @@
     <script>
     function attendanceWidget(type, clockIn = null) {
         return {
-            type, state: 'idle', statusMsg: '', error: '', photo: null,
-            latitude: null, longitude: null, stream: null, submitting: false,
+            type, 
+            state: 'idle', 
+            statusMsg: '', 
+            error: '', 
+            photo: null,
+            latitude: null, 
+            longitude: null, 
+            stream: null, 
+            submitting: false,
 
             async start() {
                 this.error = '';
@@ -133,11 +140,18 @@
 
                 this.statusMsg = 'Menghubungkan kamera selfie...';
                 try {
-                    this.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-                    this.state = 'preview';
+                    this.stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { 
+                            facingMode: 'user',
+                            width: { ideal: 640 },
+                            height: { ideal: 480 }
+                        } 
+                    });
+                    this.state = 'camera';
                     this.$nextTick(() => {
-                        this.$refs.video.srcObject = this.stream;
-                        setTimeout(() => this.takePhoto(), 1500);
+                        if (this.$refs.video) {
+                            this.$refs.video.srcObject = this.stream;
+                        }
                     });
                 } catch (e) {
                     this.state = 'idle';
@@ -156,17 +170,45 @@
 
             takePhoto() {
                 const v = this.$refs.video, c = this.$refs.canvas;
-                if (!v) return;
+                if (!v || !c) return;
                 c.width = v.videoWidth || 640; 
                 c.height = v.videoHeight || 480;
                 c.getContext('2d').drawImage(v, 0, 0);
-                this.photo = c.toDataURL('image/jpeg', 0.8);
-                if (this.stream) this.stream.getTracks().forEach(t => t.stop());
+                this.photo = c.toDataURL('image/jpeg', 0.85);
+                if (this.stream) {
+                    this.stream.getTracks().forEach(t => t.stop());
+                    this.stream = null;
+                }
+                this.state = 'review';
             },
 
             retake() { 
                 this.photo = null; 
                 this.start(); 
+            },
+
+            cancel() {
+                if (this.stream) {
+                    this.stream.getTracks().forEach(t => t.stop());
+                    this.stream = null;
+                }
+                this.photo = null;
+                this.state = 'idle';
+            },
+
+            handleFileUpload(e) {
+                const file = e.target.files && e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    this.photo = event.target.result;
+                    if (this.stream) {
+                        this.stream.getTracks().forEach(t => t.stop());
+                        this.stream = null;
+                    }
+                    this.state = 'review';
+                };
+                reader.readAsDataURL(file);
             },
 
             async submit() {

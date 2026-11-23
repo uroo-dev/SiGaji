@@ -11,6 +11,7 @@ use App\Models\OvertimeRequest;
 use App\Models\Payslip;
 use App\Models\PayslipItem;
 use App\Models\User;
+use App\Services\PayrollCalculatorService;
 use App\Services\SettingService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -28,7 +29,7 @@ class ProcessMonthlyPayroll implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(SettingService $settingService): void
+    public function handle(SettingService $settingService, PayrollCalculatorService $calculator): void
     {
         $employees = User::role(UserRole::EMPLOYEE)->where('is_active', true)->get();
         $total = $employees->count();
@@ -40,43 +41,47 @@ class ProcessMonthlyPayroll implements ShouldQueue
         ], 3600);
 
         $lateRatePerMinute = (float) $settingService->get('late_deduction_per_minute', 1000);
+        $hourlyOvertimeRate = (float) $settingService->get('overtime_hourly_rate', 25000);
         $completed = 0;
 
         foreach ($employees as $employee) {
-            // Cek apakah slip gaji sudah final
             $existing = Payslip::where('user_id', $employee->id)->where('period', $this->period)->first();
             if ($existing && $existing->status === PayslipStatus::FINAL) {
                 $completed++;
                 continue;
             }
 
-            // Hitung keterlambatan di periode terkait
-            $totalLateMinutes = Attendance::where('user_id', $employee->id)
+            // Hitung keterlambatan
+            $totalLateMinutes = (int) Attendance::where('user_id', $employee->id)
                 ->where('date', 'like', "{$this->period}%")
                 ->sum('late_minutes');
 
-            $lateDeduction = $totalLateMinutes * $lateRatePerMinute;
+            $lateDeduction = $calculator->calculateLateDeduction($totalLateMinutes, $lateRatePerMinute);
 
-            // Hitung lembur disetujui di periode terkait (cth: Rp 25.000 / jam)
-            $totalOvertimeHours = OvertimeRequest::where('user_id', $employee->id)
+            // Hitung lembur disetujui
+            $totalOvertimeHours = (float) OvertimeRequest::where('user_id', $employee->id)
                 ->where('date', 'like', "{$this->period}%")
                 ->where('status', 'approved')
                 ->sum('hours');
 
-            $hourlyOvertimeRate = (float) $settingService->get('overtime_hourly_rate', 25000);
-            $overtimePay = $totalOvertimeHours * $hourlyOvertimeRate;
+            $overtimePay = $calculator->calculateOvertimePay($totalOvertimeHours, $hourlyOvertimeRate);
 
-            // Hitung potongan cuti tanpa gaji (unpaid)
-            $unpaidDays = LeaveRequest::where('user_id', $employee->id)
+            // Hitung potongan unpaid leave
+            $unpaidDays = (int) LeaveRequest::where('user_id', $employee->id)
                 ->where('type', 'unpaid')
                 ->where('status', 'approved')
                 ->where('start_date', 'like', "{$this->period}%")
                 ->sum('total_days');
 
-            $dailySalary = $employee->base_salary > 0 ? ($employee->base_salary / 22) : 0;
-            $leaveDeduction = round($unpaidDays * $dailySalary);
+            $leaveDeduction = $calculator->calculateLeaveDeduction((float) $employee->base_salary, $unpaidDays);
 
-            $netSalary = max(0, $employee->base_salary + $overtimePay - $lateDeduction - $leaveDeduction);
+            // Hitung Gaji Bersih
+            $netSalary = $calculator->calculateNetSalary(
+                (float) $employee->base_salary,
+                $overtimePay,
+                $lateDeduction,
+                $leaveDeduction
+            );
 
             $payslip = Payslip::updateOrCreate(
                 ['user_id' => $employee->id, 'period' => $this->period],
@@ -90,7 +95,7 @@ class ProcessMonthlyPayroll implements ShouldQueue
                 ]
             );
 
-            // Re-generate rincian item slip gaji
+            // Re-generate itemized components
             $payslip->items()->delete();
             $payslip->items()->createMany([
                 ['component' => 'Gaji Pokok', 'amount' => $employee->base_salary, 'type' => 'earning'],

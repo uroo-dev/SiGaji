@@ -30,14 +30,20 @@ class AttendanceController extends Controller
             }
 
             return redirect()->route('employee.dashboard')->with('success', 'Clock-in berhasil!');
-        } catch (AlreadyClockedInException | ValidationException $e) {
-            $msg = $e instanceof ValidationException ? implode(', ', array_merge(...array_values($e->errors()))) : $e->getMessage();
+        } catch (AlreadyClockedInException $e) {
+            if ($request->wantsJson()) {
+                return response()->json(['message' => $e->getMessage()], 422);
+            }
+
+            return back()->withErrors(['error' => $e->getMessage()]);
+        } catch (ValidationException $e) {
+            $msg = implode(', ', array_merge(...array_values($e->errors())));
 
             if ($request->wantsJson()) {
                 return response()->json(['message' => $msg], 422);
             }
 
-            return back()->withErrors($e instanceof ValidationException ? $e->errors() : ['error' => $e->getMessage()]);
+            return back()->withErrors($e->errors());
         }
     }
 

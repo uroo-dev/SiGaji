@@ -20,7 +20,7 @@ class AttendanceService
         $today = now()->toDateString();
 
         // Guard 1: Cegah double clock-in
-        if (Attendance::where('user_id', $user->id)->where('date', $today)->exists()) {
+        if (Attendance::where('user_id', $user->id)->whereDate('date', $today)->exists()) {
             throw new AlreadyClockedInException('Anda sudah melakukan clock-in hari ini.');
         }
 

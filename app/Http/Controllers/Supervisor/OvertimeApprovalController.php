@@ -26,7 +26,14 @@ class OvertimeApprovalController extends Controller
             'approved_by' => auth()->id(),
         ]);
 
-        AuditService::log('overtime.approved', $overtime);
+        AuditService::log('overtime.approved', $overtime, ['status' => 'pending'], [
+            'status' => 'approved',
+            'approved_by' => auth()->id(),
+            'employee' => $overtime->user?->name,
+            'hours' => $overtime->hours,
+            'date' => $overtime->date->toDateString(),
+            'time' => now()->toDateTimeString(),
+        ]);
 
         return back()->with('success', 'Pengajuan lembur disetujui.');
     }
@@ -39,7 +46,13 @@ class OvertimeApprovalController extends Controller
             'approval_note' => $request->approval_note ?? 'Ditolak oleh atasan',
         ]);
 
-        AuditService::log('overtime.rejected', $overtime);
+        AuditService::log('overtime.rejected', $overtime, ['status' => 'pending'], [
+            'status' => 'rejected',
+            'approved_by' => auth()->id(),
+            'approval_note' => $request->approval_note ?? 'Ditolak oleh atasan',
+            'employee' => $overtime->user?->name,
+            'time' => now()->toDateTimeString(),
+        ]);
 
         return back()->with('success', 'Pengajuan lembur ditolak.');
     }

@@ -31,7 +31,14 @@ class LeaveApprovalController extends Controller
             $leave->user->decrement('annual_leave_quota', $leave->total_days);
         }
 
-        AuditService::log('leave.approved', $leave);
+        AuditService::log('leave.approved', $leave, ['status' => 'pending'], [
+            'status' => 'approved',
+            'approved_by' => auth()->id(),
+            'employee' => $leave->user?->name,
+            'type' => $leave->type,
+            'total_days' => $leave->total_days,
+            'time' => now()->toDateTimeString(),
+        ]);
 
         return back()->with('success', 'Pengajuan cuti disetujui.');
     }
@@ -44,7 +51,13 @@ class LeaveApprovalController extends Controller
             'approval_note' => $request->approval_note ?? 'Ditolak oleh atasan',
         ]);
 
-        AuditService::log('leave.rejected', $leave);
+        AuditService::log('leave.rejected', $leave, ['status' => 'pending'], [
+            'status' => 'rejected',
+            'approved_by' => auth()->id(),
+            'approval_note' => $request->approval_note ?? 'Ditolak oleh atasan',
+            'employee' => $leave->user?->name,
+            'time' => now()->toDateTimeString(),
+        ]);
 
         return back()->with('success', 'Pengajuan cuti ditolak.');
     }

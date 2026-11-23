@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\AuditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -30,11 +31,18 @@ class EmployeeController extends Controller
             'joined_at' => 'required|date',
         ]);
 
-        User::create([
+        $employee = User::create([
             ...$validated,
             'password' => Hash::make($validated['password']),
             'role' => UserRole::EMPLOYEE,
             'is_active' => true,
+        ]);
+
+        AuditService::log('employee.created', $employee, null, [
+            'name' => $employee->name,
+            'email' => $employee->email,
+            'base_salary' => $employee->base_salary,
+            'time' => now()->toDateTimeString(),
         ]);
 
         return redirect()->route('admin.employees.index')->with('success', 'Karyawan ditambahkan.');
@@ -42,6 +50,13 @@ class EmployeeController extends Controller
 
     public function destroy(User $employee)
     {
+        AuditService::log('employee.deactivated', $employee, ['is_active' => $employee->is_active], [
+            'name' => $employee->name,
+            'email' => $employee->email,
+            'is_active' => false,
+            'time' => now()->toDateTimeString(),
+        ]);
+
         // Soft delete otomatis digunakan karena Model User pakai trait SoftDeletes
         $employee->delete();
         return back()->with('success', 'Karyawan dinonaktifkan (Soft Delete).');

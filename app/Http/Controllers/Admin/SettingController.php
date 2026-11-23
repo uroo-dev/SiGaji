@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Setting;
+use App\Services\AuditService;
 use App\Services\SettingService;
 use Illuminate\Http\Request;
 
@@ -35,6 +37,12 @@ class SettingController extends Controller
         foreach ($validated as $key => $value) {
             $this->settingService->set($key, $value);
         }
+
+        $setting = Setting::first() ?? new Setting(['id' => 1]);
+        AuditService::log('settings.updated', $setting, null, [
+            ...$validated,
+            'time' => now()->toDateTimeString(),
+        ]);
 
         return back()->with('success', 'Pengaturan berhasil diperbarui.');
     }

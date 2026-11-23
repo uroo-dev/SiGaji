@@ -59,6 +59,14 @@ class AttendanceService
             'distance_from_office' => round($distance),
         ]);
 
+        AuditService::log('attendance.clock_in', $attendance, null, [
+            'clock_in' => $attendance->clock_in,
+            'status' => $attendance->status instanceof \BackedEnum ? $attendance->status->value : (string) $attendance->status,
+            'distance_m' => $attendance->distance_from_office,
+            'late_minutes' => $attendance->late_minutes,
+            'time' => now()->toDateTimeString(),
+        ]);
+
         Cache::forget('dashboard.admin.stats');
         return $attendance;
     }
@@ -105,6 +113,11 @@ class AttendanceService
 
         $attendance->update([
             'clock_out' => now()->toTimeString(),
+        ]);
+
+        AuditService::log('attendance.clock_out', $attendance, null, [
+            'clock_out' => $attendance->clock_out,
+            'time' => now()->toDateTimeString(),
         ]);
 
         Cache::forget('dashboard.admin.stats');

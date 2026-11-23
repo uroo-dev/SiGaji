@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
+use App\Services\AuditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -29,7 +30,15 @@ class LoginController extends Controller
 
         if (Auth::attempt($credentials, $remember)) {
             $request->session()->regenerate();
-            return $this->redirectBasedOnRole(Auth::user());
+            $user = Auth::user();
+
+            AuditService::log('auth.login', $user, null, [
+                'email' => $user->email,
+                'role' => $user->role instanceof UserRole ? $user->role->value : (string) $user->role,
+                'time' => now()->toDateTimeString(),
+            ]);
+
+            return $this->redirectBasedOnRole($user);
         }
 
         return back()->withErrors([
@@ -39,6 +48,14 @@ class LoginController extends Controller
 
     public function logout(Request $request)
     {
+        $user = Auth::user();
+        if ($user) {
+            AuditService::log('auth.logout', $user, null, [
+                'email' => $user->email,
+                'time' => now()->toDateTimeString(),
+            ]);
+        }
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

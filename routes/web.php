@@ -60,11 +60,14 @@ Route::middleware(['auth', 'role.admin'])->prefix('admin')->name('admin.')->grou
     // Laporan
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('/reports/payroll', [ReportController::class, 'payroll'])->name('reports.payroll');
+    Route::get('/reports/pdf', [ReportController::class, 'pdf'])->name('reports.pdf');
     
     Route::get('/payroll', [PayrollController::class, 'index'])->name('payroll.index');
     Route::post('/payroll/generate', [PayrollController::class, 'generate'])->name('payroll.generate');
     Route::get('/payroll/status/{period}', [PayrollController::class, 'status'])->name('payroll.status');
     Route::post('/payroll/finalize', [PayrollController::class, 'finalize'])->name('payroll.finalize');
+    Route::get('/payroll/{payslip}/pdf', [PayrollController::class, 'downloadPdf'])->name('payroll.payslip.pdf');
+    Route::get('/payroll/{payslip}/excel', [PayrollController::class, 'downloadExcel'])->name('payroll.payslip.excel');
     
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::post('/settings', [SettingController::class, 'update'])->name('settings.update');
@@ -102,4 +105,5 @@ Route::middleware(['auth', 'role.employee'])->prefix('employee')->name('employee
     
     Route::get('/payslips', [PayslipController::class, 'index'])->name('payslips.index');
     Route::get('/payslips/{payslip}/pdf', [PayslipController::class, 'downloadPdf'])->name('payslips.pdf');
+    Route::get('/payslips/{payslip}/excel', [PayslipController::class, 'downloadExcel'])->name('payslips.excel');
 });

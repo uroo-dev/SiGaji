@@ -48,6 +48,12 @@ class ReportController extends Controller
             // UTF-8 BOM for Microsoft Excel compatibility
             fputs($file, "\xEF\xBB\xBF");
 
+            // Header Company & Document Info
+            fputcsv($file, ['REKAPITULASI LAPORAN PAYROLL - SIGAJI']);
+            fputcsv($file, ['Periode', $period]);
+            fputcsv($file, ['Tanggal Ekspor', now()->format('d M Y H:i:s')]);
+            fputcsv($file, []);
+
             // Header Row
             fputcsv($file, [
                 'No',
@@ -68,18 +74,60 @@ class ReportController extends Controller
                     $period,
                     $slip->user?->name ?? '-',
                     $slip->user?->email ?? '-',
-                    $slip->base_salary,
-                    $slip->overtime_pay,
-                    $slip->late_deduction,
-                    $slip->leave_deduction,
-                    $slip->net_salary,
+                    (int) $slip->base_salary,
+                    (int) $slip->overtime_pay,
+                    (int) $slip->late_deduction,
+                    (int) $slip->leave_deduction,
+                    (int) $slip->net_salary,
                     $slip->status instanceof \BackedEnum ? $slip->status->value : $slip->status,
                 ]);
             }
+
+            fputcsv($file, []);
+            fputcsv($file, [
+                'TOTAL',
+                '',
+                '',
+                '',
+                (int) $payslips->sum('base_salary'),
+                (int) $payslips->sum('overtime_pay'),
+                (int) $payslips->sum('late_deduction'),
+                (int) $payslips->sum('leave_deduction'),
+                (int) $payslips->sum('net_salary'),
+                '',
+            ]);
 
             fclose($file);
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    public function pdf(Request $request)
+    {
+        $period = $request->input('period', now()->format('Y-m'));
+        $recap = Payslip::with('user')
+            ->where('period', $period)
+            ->where('status', 'final')
+            ->get();
+        
+        $totalNet = $recap->sum('net_salary');
+        $totalOvertime = $recap->sum('overtime_pay');
+        $totalDeduction = $recap->sum('late_deduction') + $recap->sum('leave_deduction');
+
+        if (class_exists(\Dompdf\Dompdf::class) && $request->has('stream')) {
+            $html = view('pdf.report', compact('recap', 'period', 'totalNet', 'totalOvertime', 'totalDeduction'))->render();
+            $dompdf = new \Dompdf\Dompdf(['isRemoteEnabled' => true]);
+            $dompdf->loadHtml($html);
+            $dompdf->setPaper('A4', 'landscape');
+            $dompdf->render();
+
+            return response($dompdf->output(), 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => "attachment; filename=\"laporan_payroll_{$period}.pdf\"",
+            ]);
+        }
+
+        return view('pdf.report', compact('recap', 'period', 'totalNet', 'totalOvertime', 'totalDeduction'));
     }
 }

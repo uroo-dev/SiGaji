@@ -6,10 +6,20 @@
             <input type="month" name="period" value="{{ $period }}" class="border border-gray-200 rounded-xl px-4 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-brand">
             <button class="bg-gray-900 text-white px-5 py-2 rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors">Filter</button>
         </form>
-        <a href="{{ route('admin.reports.payroll', ['period' => $period]) }}" 
-           class="bg-brand text-white px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-brand-600 shadow-sm transition-all">
-            <i class="ph ph-microsoft-excel-logo text-lg"></i> Download Excel (CSV)
-        </a>
+
+        {{-- Choice to Download Excel or PDF --}}
+        <div class="flex items-center gap-2">
+            <a href="{{ route('admin.reports.payroll', ['period' => $period]) }}" 
+               class="bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-emerald-700 shadow-sm transition-all"
+               title="Unduh Rekap Format Excel (.csv)">
+                <i class="ph ph-microsoft-excel-logo text-lg"></i> Download Excel
+            </a>
+            <a href="{{ route('admin.reports.pdf', ['period' => $period]) }}" target="_blank"
+               class="bg-brand text-white px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-brand-600 shadow-sm transition-all"
+               title="Buka / Cetak Laporan Format PDF">
+                <i class="ph ph-file-pdf text-lg"></i> Download PDF
+            </a>
+        </div>
     </div>
 
     {{-- Summary Cards --}}
@@ -55,6 +65,7 @@
                         <th class="text-right px-4 py-3">Potongan</th>
                         <th class="text-right px-4 py-3">Gaji Bersih</th>
                         <th class="text-center px-4 py-3">Status</th>
+                        <th class="text-center px-4 py-3">Unduh Slip</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
@@ -74,10 +85,24 @@
                             <td class="px-4 py-3 text-right font-mono text-red-600">-{{ number_format($row->late_deduction + $row->leave_deduction, 0, ',', '.') }}</td>
                             <td class="px-4 py-3 text-right font-mono font-bold text-gray-900">Rp {{ number_format($row->net_salary, 0, ',', '.') }}</td>
                             <td class="px-4 py-3 text-center"><x-status-badge :status="$row->status" /></td>
+                            <td class="px-4 py-3 text-center">
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <a href="{{ route('admin.payroll.payslip.pdf', $row) }}" target="_blank"
+                                       class="p-1.5 rounded-lg text-red-600 bg-red-50 hover:bg-red-600 hover:text-white transition-colors"
+                                       title="Unduh Slip Gaji PDF">
+                                        <i class="ph ph-file-pdf text-base"></i>
+                                    </a>
+                                    <a href="{{ route('admin.payroll.payslip.excel', $row) }}"
+                                       class="p-1.5 rounded-lg text-emerald-600 bg-emerald-50 hover:bg-emerald-600 hover:text-white transition-colors"
+                                       title="Unduh Slip Gaji Excel">
+                                        <i class="ph ph-microsoft-excel-logo text-base"></i>
+                                    </a>
+                                </div>
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6">
+                            <td colspan="7">
                                 <x-empty-state title="Belum ada data slip final" description="Pastikan penggajian periode ini telah difinalisasi pada menu Payroll." />
                             </td>
                         </tr>

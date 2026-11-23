@@ -78,6 +78,7 @@
                                 <th class="text-right px-4 py-3">Potongan</th>
                                 <th class="text-right px-4 py-3">Gaji Bersih</th>
                                 <th class="text-center px-4 py-3">Status</th>
+                                <th class="text-center px-4 py-3">Unduh Slip</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
@@ -89,9 +90,27 @@
                                     <td class="px-4 py-3 text-right font-mono text-red-600">-{{ number_format($payslip->late_deduction + $payslip->leave_deduction, 0, ',', '.') }}</td>
                                     <td class="px-4 py-3 text-right font-mono font-bold text-gray-900">Rp {{ number_format($payslip->net_salary, 0, ',', '.') }}</td>
                                     <td class="px-4 py-3 text-center"><x-status-badge :status="$payslip->status" /></td>
+                                    <td class="px-4 py-3 text-center">
+                                        @if($payslip->status->value === 'final')
+                                            <div class="flex items-center justify-center gap-1.5">
+                                                <a href="{{ route('admin.payroll.payslip.pdf', $payslip) }}" target="_blank"
+                                                   class="p-1.5 rounded-lg text-red-600 bg-red-50 hover:bg-red-600 hover:text-white transition-colors"
+                                                   title="Unduh Slip Gaji PDF">
+                                                    <i class="ph ph-file-pdf text-base"></i>
+                                                </a>
+                                                <a href="{{ route('admin.payroll.payslip.excel', $payslip) }}"
+                                                   class="p-1.5 rounded-lg text-emerald-600 bg-emerald-50 hover:bg-emerald-600 hover:text-white transition-colors"
+                                                   title="Unduh Slip Gaji Excel">
+                                                    <i class="ph ph-microsoft-excel-logo text-base"></i>
+                                                </a>
+                                            </div>
+                                        @else
+                                            <span class="text-xs text-gray-400 italic">Draft</span>
+                                        @endif
+                                    </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="6"><x-empty-state title="Belum ada data" description="Klik tombol Hitung Gaji untuk memulai." /></td></tr>
+                                <tr><td colspan="7"><x-empty-state title="Belum ada data" description="Klik tombol Hitung Gaji untuk memulai." /></td></tr>
                             @endforelse
                         </tbody>
                     </table>

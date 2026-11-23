@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\ProcessMonthlyPayroll;
 use App\Models\Payslip;
 use App\Services\AuditService;
+use App\Services\PayslipExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
@@ -76,5 +77,19 @@ class PayrollController extends Controller
         }
 
         return back()->with('success', "{$payslips->count()} slip gaji difinalisasi.");
+    }
+
+    public function downloadPdf(Payslip $payslip, Request $request, PayslipExportService $exportService)
+    {
+        abort_if($payslip->status->value !== 'final', 403, 'Slip gaji belum difinalisasi.');
+
+        return $exportService->toPdf($payslip, $request);
+    }
+
+    public function downloadExcel(Payslip $payslip, PayslipExportService $exportService)
+    {
+        abort_if($payslip->status->value !== 'final', 403, 'Slip gaji belum difinalisasi.');
+
+        return $exportService->toExcel($payslip);
     }
 }

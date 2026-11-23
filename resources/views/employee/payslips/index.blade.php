@@ -12,10 +12,16 @@
                     <div class="flex items-center gap-3">
                         <x-status-badge :status="$payslip->status" />
                         @if($payslip->status->value === 'final')
-                            <a href="{{ route('employee.payslips.pdf', $payslip) }}" target="_blank"
-                               class="bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-600 flex items-center gap-1.5 shadow-sm">
-                                <i class="ph ph-file-pdf"></i> Unduh Slip
-                            </a>
+                            <div class="flex items-center gap-2">
+                                <a href="{{ route('employee.payslips.pdf', $payslip) }}" target="_blank"
+                                   class="bg-brand text-white px-3.5 py-2 rounded-xl text-xs font-semibold hover:bg-brand-600 flex items-center gap-1.5 shadow-sm transition-all">
+                                    <i class="ph ph-file-pdf text-base"></i> Unduh PDF
+                                </a>
+                                <a href="{{ route('employee.payslips.excel', $payslip) }}"
+                                   class="bg-emerald-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold hover:bg-emerald-700 flex items-center gap-1.5 shadow-sm transition-all">
+                                    <i class="ph ph-microsoft-excel-logo text-base"></i> Unduh Excel
+                                </a>
+                            </div>
                         @endif
                     </div>
                 </div>

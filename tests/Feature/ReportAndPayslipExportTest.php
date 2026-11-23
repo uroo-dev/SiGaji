@@ -108,7 +108,7 @@ class ReportAndPayslipExportTest extends TestCase
         $this->assertStringContainsString('6250000', $content);
     }
 
-    public function test_admin_can_view_or_print_payroll_report_pdf()
+    public function test_admin_can_download_payroll_report_pdf_using_dompdf()
     {
         $period = now()->format('Y-m');
 
@@ -116,22 +116,23 @@ class ReportAndPayslipExportTest extends TestCase
             ->get(route('admin.reports.pdf', ['period' => $period]));
 
         $response->assertStatus(200);
-        $response->assertSee('Laporan Rekapitulasi Payroll');
-        $response->assertSee('Dewi Sartika');
-        $response->assertSee('Ahmad Dahlan');
-        $response->assertSee('Cetak / Simpan PDF');
-        $response->assertSee('Unduh Excel');
+        $this->assertEquals('application/pdf', $response->headers->get('Content-Type'));
+        $this->assertStringContainsString("filename=laporan_payroll_{$period}.pdf", $response->headers->get('Content-Disposition'));
+
+        // Assert valid PDF binary
+        $this->assertStringStartsWith('%PDF-', $response->getContent());
     }
 
     public function test_admin_can_download_employee_payslip_as_pdf_and_excel()
     {
-        // PDF
+        // PDF using Dompdf
         $pdfResponse = $this->actingAs($this->admin)
             ->get(route('admin.payroll.payslip.pdf', $this->finalPayslip1));
 
         $pdfResponse->assertStatus(200);
-        $pdfResponse->assertSee('Slip Gaji Resmi');
-        $pdfResponse->assertSee('Dewi Sartika');
+        $this->assertEquals('application/pdf', $pdfResponse->headers->get('Content-Type'));
+        $this->assertStringContainsString('filename=slip_gaji_', $pdfResponse->headers->get('Content-Disposition'));
+        $this->assertStringStartsWith('%PDF-', $pdfResponse->getContent());
 
         // Excel
         $excelResponse = $this->actingAs($this->admin)
@@ -152,13 +153,14 @@ class ReportAndPayslipExportTest extends TestCase
 
     public function test_employee_can_download_their_own_payslip_pdf_and_excel()
     {
-        // PDF
+        // PDF using Dompdf
         $pdfResponse = $this->actingAs($this->employee1)
             ->get(route('employee.payslips.pdf', $this->finalPayslip1));
 
         $pdfResponse->assertStatus(200);
-        $pdfResponse->assertSee('Slip Gaji Resmi');
-        $pdfResponse->assertSee('Dewi Sartika');
+        $this->assertEquals('application/pdf', $pdfResponse->headers->get('Content-Type'));
+        $this->assertStringContainsString('filename=slip_gaji_', $pdfResponse->headers->get('Content-Disposition'));
+        $this->assertStringStartsWith('%PDF-', $pdfResponse->getContent());
 
         // Excel
         $excelResponse = $this->actingAs($this->employee1)

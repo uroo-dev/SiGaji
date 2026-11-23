@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Payslip;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -69,7 +70,6 @@ class PayslipExportService
 
             // Detailed items
             foreach ($payslip->items as $item) {
-                // If it's already covered by base items, avoid duplication or list item
                 $typeLabel = $item->type === 'earning' ? 'Kredit (+)' : 'Debet (-)';
                 $category = $item->type === 'earning' ? 'Pendapatan' : 'Potongan';
                 fputcsv($file, [$category, $item->component, $typeLabel, (int) $item->amount]);
@@ -87,26 +87,20 @@ class PayslipExportService
     }
 
     /**
-     * Render or stream PDF payslip.
+     * Render and download/stream true PDF payslip using Dompdf.
      */
     public function toPdf(Payslip $payslip, Request $request)
     {
-        if (class_exists(\Dompdf\Dompdf::class) && $request->has('stream')) {
-            $html = view('pdf.payslip', compact('payslip'))->render();
-            $dompdf = new \Dompdf\Dompdf(['isRemoteEnabled' => true]);
-            $dompdf->loadHtml($html);
-            $dompdf->setPaper('A4', 'portrait');
-            $dompdf->render();
+        $fileName = "slip_gaji_{$payslip->period}_{$payslip->user->name}.pdf";
+        $fileName = preg_replace('/[^A-Za-z0-9_\-\.]/', '_', $fileName);
 
-            $fileName = "slip_gaji_{$payslip->period}_{$payslip->user->name}.pdf";
-            $fileName = preg_replace('/[^A-Za-z0-9_\-\.]/', '_', $fileName);
+        $pdf = Pdf::loadView('pdf.payslip', compact('payslip'))
+            ->setPaper('a4', 'portrait');
 
-            return response($dompdf->output(), 200, [
-                'Content-Type' => 'application/pdf',
-                'Content-Disposition' => "attachment; filename=\"{$fileName}\"",
-            ]);
+        if ($request->has('stream') || $request->has('preview')) {
+            return $pdf->stream($fileName);
         }
 
-        return view('pdf.payslip', compact('payslip'));
+        return $pdf->download($fileName);
     }
 }

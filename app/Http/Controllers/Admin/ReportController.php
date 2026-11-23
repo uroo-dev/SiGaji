@@ -115,19 +115,15 @@ class ReportController extends Controller
         $totalOvertime = $recap->sum('overtime_pay');
         $totalDeduction = $recap->sum('late_deduction') + $recap->sum('leave_deduction');
 
-        if (class_exists(\Dompdf\Dompdf::class) && $request->has('stream')) {
-            $html = view('pdf.report', compact('recap', 'period', 'totalNet', 'totalOvertime', 'totalDeduction'))->render();
-            $dompdf = new \Dompdf\Dompdf(['isRemoteEnabled' => true]);
-            $dompdf->loadHtml($html);
-            $dompdf->setPaper('A4', 'landscape');
-            $dompdf->render();
+        $fileName = "laporan_payroll_{$period}.pdf";
 
-            return response($dompdf->output(), 200, [
-                'Content-Type' => 'application/pdf',
-                'Content-Disposition' => "attachment; filename=\"laporan_payroll_{$period}.pdf\"",
-            ]);
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.report', compact('recap', 'period', 'totalNet', 'totalOvertime', 'totalDeduction'))
+            ->setPaper('a4', 'landscape');
+
+        if ($request->has('stream') || $request->has('preview')) {
+            return $pdf->stream($fileName);
         }
 
-        return view('pdf.report', compact('recap', 'period', 'totalNet', 'totalOvertime', 'totalDeduction'));
+        return $pdf->download($fileName);
     }
 }

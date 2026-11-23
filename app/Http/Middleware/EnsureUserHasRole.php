@@ -19,11 +19,22 @@ class EnsureUserHasRole
             return redirect()->route('login');
         }
 
+        $userRoleValue = $user->role instanceof UserRole ? $user->role->value : (string) $user->role;
+
+        if (empty($roles)) {
+            $currentRoute = $request->route();
+            $action = $currentRoute ? $currentRoute->getAction() : [];
+            $middlewareList = $action['middleware'] ?? [];
+            foreach ($middlewareList as $m) {
+                if ($m === 'role.admin') $roles[] = 'admin';
+                if ($m === 'role.supervisor') $roles[] = 'supervisor';
+                if ($m === 'role.employee') $roles[] = 'employee';
+            }
+        }
+
         if (empty($roles)) {
             $roles = ['admin'];
         }
-
-        $userRoleValue = $user->role instanceof UserRole ? $user->role->value : (string) $user->role;
 
         if (! in_array($userRoleValue, $roles, true)) {
             abort(403, 'Akses ditolak. Anda tidak memiliki izin untuk mengakses halaman ini.');

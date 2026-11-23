@@ -11,8 +11,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 
-    {{-- Icons --}}
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    {{-- Icons (Phosphor Icons) --}}
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css"/>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css"/>
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
 
     {{-- Tailwind CSS --}}
     <script src="https://cdn.tailwindcss.com"></script>
@@ -56,7 +58,16 @@
         [x-cloak] { display: none !important; }
     </style>
 </head>
-<body class="bg-gray-100 h-screen overflow-hidden" x-data="{ sidebarOpen: false }">
+<body class="bg-gray-100 h-screen overflow-hidden" 
+      x-data="{ 
+          sidebarOpen: window.innerWidth < 1024 ? false : (localStorage.getItem('sidebarOpen') === null ? true : (localStorage.getItem('sidebarOpen') === 'true')),
+          toggleSidebar() {
+              this.sidebarOpen = !this.sidebarOpen;
+              if (window.innerWidth >= 1024) {
+                  localStorage.setItem('sidebarOpen', this.sidebarOpen);
+              }
+          }
+      }">
 
     <div class="flex h-full w-full">
         {{-- Sidebar --}}

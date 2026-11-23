@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\PayslipStatus;
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcessMonthlyPayroll;
 use App\Models\Payslip;
+use App\Models\User;
 use App\Services\AuditService;
 use App\Services\PayslipExportService;
 use Illuminate\Http\Request;
@@ -46,11 +48,36 @@ class PayrollController extends Controller
             ], 422);
         }
 
-        // Reset progress di Redis
-        Cache::forget("payroll.progress.{$request->period}");
+        $totalEmployees = User::role(UserRole::EMPLOYEE)->where('is_active', true)->count();
+
+        if ($totalEmployees === 0) {
+            return response()->json([
+                'error' => 'Tidak ada karyawan aktif yang ditemukan untuk dihitung gajinya.',
+            ], 422);
+        }
+
+        // Inisialisasi progress di Cache
+        Cache::put("payroll.progress.{$request->period}", [
+            'total' => $totalEmployees,
+            'completed' => 0,
+            'status' => 'processing',
+        ], 3600);
         
         // Dispatch Job ke Queue
-        ProcessMonthlyPayroll::dispatch($request->period, $recalculate);
+        try {
+            ProcessMonthlyPayroll::dispatch($request->period, $recalculate);
+        } catch (\Throwable $e) {
+            Cache::put("payroll.progress.{$request->period}", [
+                'total' => $totalEmployees,
+                'completed' => 0,
+                'status' => 'failed',
+                'error' => $e->getMessage(),
+            ], 3600);
+
+            return response()->json([
+                'error' => 'Gagal memproses perhitungan gaji: ' . $e->getMessage()
+            ], 500);
+        }
 
         AuditService::log('payroll.generated', null, null, [
             'period' => $request->period,

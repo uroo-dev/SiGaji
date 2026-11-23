@@ -116,6 +116,11 @@
                     <div class="bg-brand h-2.5 rounded-full transition-all duration-300" :style="`width: ${progress}%`"></div>
                 </div>
                 <p class="text-xs text-gray-400 mt-3">Proses berjalan aman di background. Jangan tutup halaman ini.</p>
+                <div class="mt-4 pt-3 border-t border-gray-100">
+                    <button type="button" @click="cancelProcessing()" class="text-xs text-gray-400 hover:text-red-500 underline font-medium">
+                        Batalkan / Muat Ulang Halaman
+                    </button>
+                </div>
             </div>
         </template>
 
@@ -189,12 +194,28 @@
                 completed: 0, 
                 total: 0, 
                 jobId: null,
+                timerId: null,
                 isRecalculating: false,
 
                 init() {
                     if ({{ $payslips->where('status.value', 'draft')->count() > 0 ? 'true' : 'false' }}) {
                         this.state = 'review';
                     }
+                },
+
+                cancelProcessing() {
+                    if (this.timerId) {
+                        clearInterval(this.timerId);
+                        this.timerId = null;
+                    }
+                    this.state = 'idle';
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Pemantauan Dibatalkan',
+                        text: 'Pemantauan status perhitungan dihentikan. Anda dapat memuat ulang halaman.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
                 },
 
                 generate(recalculate = false) {
@@ -237,30 +258,89 @@
                 },
 
                 poll() {
-                    const timer = setInterval(async () => {
+                    if (this.timerId) {
+                        clearInterval(this.timerId);
+                    }
+                    let attempts = 0;
+                    const maxAttempts = 25; // 25 detik batas aman
+
+                    this.timerId = setInterval(async () => {
+                        attempts++;
                         try {
                             const res = await fetch(`/admin/payroll/status/${period}`);
+                            if (!res.ok) {
+                                throw new Error('Status respons tidak berhasil');
+                            }
                             const data = await res.json();
-                            this.completed = data.completed;
-                            this.total = data.total;
-                            this.progress = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
+                            this.completed = data.completed ?? 0;
+                            this.total = data.total ?? 0;
+                            this.progress = data.total > 0 ? Math.round((this.completed / this.total) * 100) : 0;
 
-                            if (data.status === 'done' || (data.total > 0 && data.completed >= data.total)) {
-                                clearInterval(timer);
+                            // 1. Cek jika status GAGAL / ERROR
+                            if (data.status === 'failed' || data.error) {
+                                clearInterval(this.timerId);
+                                this.timerId = null;
+                                this.state = 'idle';
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Perhitungan Gaji Gagal',
+                                    text: data.error || 'Terjadi kesalahan saat memproses perhitungan gaji.',
+                                    confirmColor: '#FF5A36'
+                                });
+                                return;
+                            }
+
+                            // 2. Cek jika SELESAI
+                            if (data.status === 'done' || (data.total > 0 && this.completed >= data.total)) {
+                                clearInterval(this.timerId);
+                                this.timerId = null;
                                 this.state = 'done';
                                 Swal.fire({
                                     icon: 'success',
                                     title: 'Selesai!',
                                     text: 'Perhitungan gaji berhasil diselesaikan.',
-                                    timer: 1500,
+                                    timer: 1400,
                                     showConfirmButton: false
                                 });
                                 setTimeout(() => {
                                     window.location.reload();
                                 }, 1200);
+                                return;
+                            }
+
+                            // 3. Cek batas timeout jika queue antrean macet
+                            if (attempts >= maxAttempts) {
+                                clearInterval(this.timerId);
+                                this.timerId = null;
+                                this.state = 'idle';
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Proses Membutuhkan Waktu',
+                                    text: 'Perhitungan memakan waktu lebih lama dari biasanya. Silakan muat ulang halaman untuk melihat hasil terbaru.',
+                                    confirmText: 'Muat Ulang Halaman',
+                                    showCancelButton: true,
+                                    cancelText: 'Tutup',
+                                    confirmColor: '#FF5A36'
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        window.location.reload();
+                                    }
+                                });
+                                return;
                             }
                         } catch (e) {
                             console.error('Polling error', e);
+                            if (attempts >= maxAttempts) {
+                                clearInterval(this.timerId);
+                                this.timerId = null;
+                                this.state = 'idle';
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Gagal Memantau Status',
+                                    text: 'Terputus dari server saat memantau status perhitungan. Silakan muat ulang halaman.',
+                                    confirmColor: '#FF5A36'
+                                });
+                            }
                         }
                     }, 1000);
                 }

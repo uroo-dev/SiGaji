@@ -9,9 +9,10 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Laravel-11.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel 11">
-  <img src="https://img.shields.io/badge/PHP-8.2+-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP 8.2+">
-  <img src="https://img.shields.io/badge/MariaDB-11.x-003545?style=for-the-badge&logo=mariadb&logoColor=white" alt="MariaDB">
+  <img src="https://img.shields.io/badge/Laravel-13.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel 13">
+  <img src="https://img.shields.io/badge/PHP-8.5+-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP 8.5+">
+  <img src="https://img.shields.io/badge/MariaDB-11.8+-003545?style=for-the-badge&logo=mariadb&logoColor=white" alt="MariaDB 11.8+">
+  <img src="https://img.shields.io/badge/PHPUnit-12.x-3776AB?style=for-the-badge&logo=php&logoColor=white" alt="PHPUnit 12">
   <img src="https://img.shields.io/badge/TailwindCSS-CDN-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS">
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT License">
   <img src="https://img.shields.io/badge/Status-Active%20Development-blue?style=for-the-badge" alt="Status">
@@ -239,12 +240,13 @@ erDiagram
 
 ## 🛠️ Tech Stack
 
-* **Backend Framework:** [Laravel 11.x](https://laravel.com)
-* **Bahasa Pemrograman:** PHP 8.2+
-* **Basis Data:** MariaDB 11.x / MySQL 8.x
+* **Backend Framework:** [Laravel 13.x](https://laravel.com) (`v13.43.0`)
+* **Bahasa Pemrograman:** PHP 8.5+ (minimum `^8.3` sesuai `composer.json`, aktif: `v8.5.11`)
+* **Basis Data:** MariaDB 11.8+ (`11.8.8-MariaDB`) / MySQL 8.x
 * **ORM:** Eloquent ORM (dengan deklarasi tipe relasi eksplisit `: BelongsTo`, `: HasMany`, `: MorphTo`)
 * **Frontend:** Blade Templating + Tailwind CSS / Bootstrap 5 (CDN-first approach)
-* **Arsitektur Testing:** PHPUnit / Pest PHP
+* **Paket CLI & Dev:** Laravel Tinker 3.x, Laravel Pail, Laravel Pint
+* **Arsitektur Testing:** PHPUnit 12.x (`v12.5.12`)
 
 ---
 
@@ -252,9 +254,9 @@ erDiagram
 
 ### 1. Prasyarat Sistem
 Pastikan perangkat Anda telah terinstal:
-* PHP >= 8.2 (dengan ekstensi `pdo_mysql`, `mbstring`, `openssl`, `bcmath`)
-* Composer >= 2.x
-* MariaDB / MySQL Server
+* PHP >= 8.3 (direkomendasikan PHP 8.5+ dengan ekstensi `pdo_mysql`, `mbstring`, `openssl`, `bcmath`)
+* Composer >= 2.10.x
+* MariaDB >= 11.8 / MySQL Server
 
 ### 2. Kloning Repositori
 ```bash

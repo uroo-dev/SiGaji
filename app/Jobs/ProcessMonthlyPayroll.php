@@ -24,7 +24,10 @@ class ProcessMonthlyPayroll implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(public string $period) {}
+    public function __construct(
+        public string $period,
+        public bool $recalculate = false
+    ) {}
 
     /**
      * Execute the job.
@@ -33,6 +36,15 @@ class ProcessMonthlyPayroll implements ShouldQueue
     {
         $employees = User::role(UserRole::EMPLOYEE)->where('is_active', true)->get();
         $total = $employees->count();
+
+        if ($total === 0) {
+            Cache::put("payroll.progress.{$this->period}", [
+                'total' => 0,
+                'completed' => 0,
+                'status' => 'done',
+            ], 3600);
+            return;
+        }
 
         Cache::put("payroll.progress.{$this->period}", [
             'total' => $total,
@@ -46,7 +58,7 @@ class ProcessMonthlyPayroll implements ShouldQueue
 
         foreach ($employees as $employee) {
             $existing = Payslip::where('user_id', $employee->id)->where('period', $this->period)->first();
-            if ($existing && $existing->status === PayslipStatus::FINAL) {
+            if ($existing && $existing->status === PayslipStatus::FINAL && ! $this->recalculate) {
                 $completed++;
                 continue;
             }
@@ -92,6 +104,8 @@ class ProcessMonthlyPayroll implements ShouldQueue
                     'leave_deduction' => $leaveDeduction,
                     'net_salary' => $netSalary,
                     'status' => PayslipStatus::DRAFT,
+                    'finalized_by' => null,
+                    'finalized_at' => null,
                 ]
             );
 

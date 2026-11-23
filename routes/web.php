@@ -66,6 +66,7 @@ Route::middleware(['auth', 'role.admin'])->prefix('admin')->name('admin.')->grou
     Route::post('/payroll/generate', [PayrollController::class, 'generate'])->name('payroll.generate');
     Route::get('/payroll/status/{period}', [PayrollController::class, 'status'])->name('payroll.status');
     Route::post('/payroll/finalize', [PayrollController::class, 'finalize'])->name('payroll.finalize');
+    Route::post('/payroll/revert', [PayrollController::class, 'revert'])->name('payroll.revert');
     Route::get('/payroll/{payslip}/pdf', [PayrollController::class, 'downloadPdf'])->name('payroll.payslip.pdf');
     Route::get('/payroll/{payslip}/excel', [PayrollController::class, 'downloadExcel'])->name('payroll.payslip.excel');
     

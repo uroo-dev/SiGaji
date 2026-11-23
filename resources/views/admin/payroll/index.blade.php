@@ -8,7 +8,89 @@
         </x-slot:actions>
     </x-page-header>
 
+    @php
+        $finalCount = $payslips->where('status.value', 'final')->count();
+        $draftCount = $payslips->where('status.value', 'draft')->count();
+        $totalCount = $payslips->count();
+    @endphp
+
     <div x-data="payrollManager('{{ $period }}')" x-init="init()">
+        
+        {{-- Status Periode & Action Controls --}}
+        @if($totalCount > 0)
+            <div class="mb-5 flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl {{ $finalCount > 0 && $draftCount === 0 ? 'bg-emerald-50 border border-emerald-200' : 'bg-amber-50 border border-amber-200' }} shadow-sm">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 {{ $finalCount > 0 && $draftCount === 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
+                        <i class="ph {{ $finalCount > 0 && $draftCount === 0 ? 'ph-seal-check' : 'ph-clock-countdown' }} text-2xl"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h4 class="font-bold text-sm {{ $finalCount > 0 && $draftCount === 0 ? 'text-emerald-950' : 'text-amber-950' }}">
+                                {{ $finalCount > 0 && $draftCount === 0 ? 'Status: Difinalisasi (Resmi)' : 'Status: Draft (Belum Difinalisasi)' }}
+                            </h4>
+                            <span class="text-[11px] font-mono px-2 py-0.5 rounded-md font-semibold {{ $finalCount > 0 && $draftCount === 0 ? 'bg-emerald-200 text-emerald-800' : 'bg-amber-200 text-amber-800' }}">
+                                {{ $finalCount > 0 && $draftCount === 0 ? 'RESMI' : 'DRAFT' }}
+                            </span>
+                        </div>
+                        <p class="text-xs {{ $finalCount > 0 && $draftCount === 0 ? 'text-emerald-800' : 'text-amber-800' }} mt-0.5">
+                            {{ $finalCount > 0 && $draftCount === 0 
+                                ? 'Slip gaji sudah dipublikasikan ke seluruh karyawan. Anda dapat mengembalikan ke draft jika perlu penyesuaian atau ingin dihitung ulang.' 
+                                : 'Slip gaji masih tersimpan sebagai draft internal dan belum terlihat oleh karyawan. Periksa angka lalu finalisasi.' }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 flex-wrap">
+                    {{-- Tombol Hitung Ulang (bisa dipakai saat Final maupun Draft) --}}
+                    <button type="button" @click="generate(true)" 
+                            class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all">
+                        <i class="ph ph-arrows-clockwise text-base text-brand"></i> Hitung Ulang
+                    </button>
+
+                    @if($finalCount > 0)
+                        {{-- Tombol Kembalikan ke Draft --}}
+                        <button type="button" 
+                                onclick="confirmModal({
+                                    title: 'Kembalikan Payroll Periode {{ $period }} ke Draft?',
+                                    text: 'Slip gaji akan diubah kembali ke status Draft dan sementara disembunyikan dari karyawan sampai difinalisasi ulang.',
+                                    icon: 'warning',
+                                    confirmText: 'Ya, Kembalikan ke Draft',
+                                    cancelText: 'Batal',
+                                    confirmColor: '#ea580c',
+                                    formId: 'revert-payroll-form'
+                                })"
+                                class="bg-amber-600 text-white hover:bg-amber-700 px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all">
+                            <i class="ph ph-arrow-u-up-left text-base"></i> Kembalikan ke Draft
+                        </button>
+                        <form id="revert-payroll-form" method="POST" action="{{ route('admin.payroll.revert') }}" class="hidden">
+                            @csrf
+                            <input type="hidden" name="period" value="{{ $period }}">
+                        </form>
+                    @endif
+
+                    @if($draftCount > 0)
+                        {{-- Tombol Finalisasi --}}
+                        <button type="button" 
+                                onclick="confirmModal({
+                                    title: 'Finalisasi Slip Gaji {{ $period }}?',
+                                    text: 'Slip gaji yang difinalisasi akan langsung dipublikasikan ke seluruh karyawan dan statusnya berubah menjadi resmi.',
+                                    icon: 'question',
+                                    confirmText: 'Ya, Finalisasi',
+                                    cancelText: 'Batal',
+                                    confirmColor: '#FF5A36',
+                                    formId: 'finalize-payroll-form'
+                                })"
+                                class="bg-brand text-white px-5 py-2.5 rounded-xl text-xs font-semibold hover:bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all">
+                            <i class="ph ph-check-circle text-base"></i> Finalisasi Payroll
+                        </button>
+                        <form id="finalize-payroll-form" method="POST" action="{{ route('admin.payroll.finalize') }}" class="hidden">
+                            @csrf
+                            <input type="hidden" name="period" value="{{ $period }}">
+                        </form>
+                    @endif
+                </div>
+            </div>
+        @endif
         
         {{-- Generate Button (jika belum ada data) --}}
         <template x-if="state === 'idle' && {{ $payslips->isEmpty() ? 'true' : 'false' }}">
@@ -18,7 +100,7 @@
                 </div>
                 <h3 class="text-xl font-bold text-gray-900 mb-2">Belum Ada Data Payroll</h3>
                 <p class="text-sm text-gray-500 mb-8 max-w-sm mx-auto">Klik tombol di bawah untuk menghitung gaji seluruh karyawan aktif periode <strong>{{ $period }}</strong> secara otomatis.</p>
-                <button type="button" @click="generate()" class="bg-brand text-white px-8 py-3 rounded-2xl font-semibold hover:bg-brand-600 transition-all shadow-lg shadow-brand/30 inline-flex items-center gap-2">
+                <button type="button" @click="generate(false)" class="bg-brand text-white px-8 py-3 rounded-2xl font-semibold hover:bg-brand-600 transition-all shadow-lg shadow-brand/30 inline-flex items-center gap-2">
                     <i class="ph ph-play text-lg"></i> Hitung Gaji Sekarang
                 </button>
             </div>
@@ -28,7 +110,7 @@
         <template x-if="state === 'processing'">
             <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-10 text-center max-w-md mx-auto mt-6">
                 <div class="w-16 h-16 rounded-full border-4 border-brand border-t-transparent animate-spin mx-auto mb-5"></div>
-                <h3 class="text-lg font-bold text-gray-900 mb-1">Menghitung Gaji Karyawan...</h3>
+                <h3 class="text-lg font-bold text-gray-900 mb-1" x-text="isRecalculating ? 'Menghitung Ulang Gaji...' : 'Menghitung Gaji Karyawan...'"></h3>
                 <p class="text-sm text-gray-500" x-text="`${completed} dari ${total} karyawan selesai dihitung`"></p>
                 <div class="w-full bg-gray-100 rounded-full h-2.5 mt-4 overflow-hidden">
                     <div class="bg-brand h-2.5 rounded-full transition-all duration-300" :style="`width: ${progress}%`"></div>
@@ -37,35 +119,14 @@
             </div>
         </template>
 
-        {{-- Review Table (draft list) --}}
+        {{-- Review Table --}}
         <template x-if="state === 'review' || state === 'done' || {{ !$payslips->isEmpty() ? 'true' : 'false' }}">
             <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <div class="p-4 sm:p-5 border-b border-gray-100 flex justify-between items-center flex-wrap gap-3">
                     <div>
-                        <h3 class="font-bold text-gray-900 text-base">Rincian Payroll — {{ $period }}</h3>
-                        <p class="text-xs text-gray-500 mt-0.5">Total bersih: <span class="font-mono font-bold text-gray-900 text-sm">Rp {{ number_format($payslips->sum('net_salary'), 0, ',', '.') }}</span></p>
+                        <h3 class="font-bold text-gray-900 text-base">Rincian Slip Gaji Karyawan — {{ $period }}</h3>
+                        <p class="text-xs text-gray-500 mt-0.5">Total pengeluaran gaji bersih: <span class="font-mono font-bold text-gray-900 text-sm">Rp {{ number_format($payslips->sum('net_salary'), 0, ',', '.') }}</span></p>
                     </div>
-                    @if($payslips->where('status.value', 'draft')->count() > 0)
-                        <div>
-                            <button type="button" 
-                                    onclick="confirmModal({
-                                        title: 'Finalisasi Slip Gaji {{ $period }}?',
-                                        text: 'Slip gaji yang difinalisasi akan langsung dipublikasikan ke seluruh karyawan dan statusnya berubah menjadi resmi (tidak dapat diedit kembali).',
-                                        icon: 'warning',
-                                        confirmText: 'Ya, Finalisasi',
-                                        cancelText: 'Batal',
-                                        confirmColor: '#FF5A36',
-                                        formId: 'finalize-payroll-form'
-                                    })"
-                                    class="bg-brand text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-brand-600 shadow-md flex items-center gap-2 transition-all">
-                                <i class="ph ph-check-circle text-lg"></i> Finalisasi Payroll
-                            </button>
-                            <form id="finalize-payroll-form" method="POST" action="{{ route('admin.payroll.finalize') }}" class="hidden">
-                                @csrf
-                                <input type="hidden" name="period" value="{{ $period }}">
-                            </form>
-                        </div>
-                    @endif
                 </div>
 
                 <div class="overflow-x-auto">
@@ -105,7 +166,7 @@
                                                 </a>
                                             </div>
                                         @else
-                                            <span class="text-xs text-gray-400 italic">Draft</span>
+                                            <span class="text-xs text-amber-600 font-medium italic">Draft</span>
                                         @endif
                                     </td>
                                 </tr>
@@ -124,7 +185,11 @@
         function payrollManager(period) {
             return {
                 state: 'idle',
-                progress: 0, completed: 0, total: 0, jobId: null,
+                progress: 0, 
+                completed: 0, 
+                total: 0, 
+                jobId: null,
+                isRecalculating: false,
 
                 init() {
                     if ({{ $payslips->where('status.value', 'draft')->count() > 0 ? 'true' : 'false' }}) {
@@ -132,12 +197,17 @@
                     }
                 },
 
-                generate() {
+                generate(recalculate = false) {
+                    const isRe = !!recalculate;
+                    this.isRecalculating = isRe;
+
                     confirmModal({
-                        title: `Hitung Payroll Periode ${period}?`,
-                        text: 'Sistem akan menghitung gaji pokok, lembur yang disetujui, dan potongan denda keterlambatan seluruh karyawan aktif.',
+                        title: isRe ? `Hitung Ulang Payroll Periode ${period}?` : `Hitung Payroll Periode ${period}?`,
+                        text: isRe 
+                            ? 'Sistem akan menghitung ulang seluruh absensi, lembur yang disetujui, dan potongan denda seluruh karyawan aktif. Status slip gaji akan menjadi Draft sampai difinalisasi ulang.' 
+                            : 'Sistem akan menghitung gaji pokok, lembur yang disetujui, dan potongan denda keterlambatan seluruh karyawan aktif.',
                         icon: 'question',
-                        confirmText: 'Mulai Hitung',
+                        confirmText: isRe ? 'Ya, Hitung Ulang' : 'Mulai Hitung',
                         cancelText: 'Batal',
                         confirmColor: '#FF5A36',
                         onConfirm: async () => {
@@ -149,7 +219,7 @@
                                         'Content-Type': 'application/json',
                                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                                     },
-                                    body: JSON.stringify({ period })
+                                    body: JSON.stringify({ period, recalculate: isRe })
                                 });
                                 const data = await res.json();
                                 if (!res.ok) { 
@@ -168,16 +238,31 @@
 
                 poll() {
                     const timer = setInterval(async () => {
-                        const res = await fetch(`/admin/payroll/status/${period}`);
-                        const data = await res.json();
-                        this.completed = data.completed;
-                        this.total = data.total;
-                        this.progress = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
-                        if (data.status === 'done' || data.status === 'completed') {
-                            clearInterval(timer);
-                            setTimeout(() => window.location.reload(), 800);
+                        try {
+                            const res = await fetch(`/admin/payroll/status/${period}`);
+                            const data = await res.json();
+                            this.completed = data.completed;
+                            this.total = data.total;
+                            this.progress = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
+
+                            if (data.status === 'done' || (data.total > 0 && data.completed >= data.total)) {
+                                clearInterval(timer);
+                                this.state = 'done';
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Selesai!',
+                                    text: 'Perhitungan gaji berhasil diselesaikan.',
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                });
+                                setTimeout(() => {
+                                    window.location.reload();
+                                }, 1200);
+                            }
+                        } catch (e) {
+                            console.error('Polling error', e);
                         }
-                    }, 2000);
+                    }, 1000);
                 }
             };
         }

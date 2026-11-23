@@ -66,6 +66,15 @@ function clockInWidget() {
             } catch (e) {
                 this.state = 'idle';
                 this.error = 'Gagal mengakses GPS. Harap izinkan akses lokasi pada browser Anda.';
+                if (window.Swal) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Izin Lokasi Diperlukan',
+                        text: this.error,
+                        confirmButtonColor: '#FF5A36',
+                        customClass: { popup: 'rounded-3xl shadow-2xl font-sans' }
+                    });
+                }
                 return;
             }
 
@@ -80,6 +89,15 @@ function clockInWidget() {
             } catch (e) {
                 this.state = 'idle';
                 this.error = 'Gagal membuka kamera. Harap izinkan akses kamera.';
+                if (window.Swal) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Izin Kamera Diperlukan',
+                        text: this.error,
+                        confirmButtonColor: '#FF5A36',
+                        customClass: { popup: 'rounded-3xl shadow-2xl font-sans' }
+                    });
+                }
             }
         },
 
@@ -119,6 +137,16 @@ function clockInWidget() {
                 } else {
                     const data = await res.json();
                     this.error = data.message || (data.errors ? Object.values(data.errors).flat().join(', ') : 'Terjadi kesalahan.');
+                    if (window.Swal) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Presensi Ditolak',
+                            text: this.error,
+                            confirmButtonColor: '#FF5A36',
+                            confirmButtonText: 'Mengerti',
+                            customClass: { popup: 'rounded-3xl shadow-2xl font-sans' }
+                        });
+                    }
                     this.submitting = false;
                 }
             } catch (e) {

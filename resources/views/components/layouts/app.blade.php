@@ -25,6 +25,9 @@
     {{-- Chart.js --}}
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+    {{-- SweetAlert2 --}}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     {{-- Tailwind Config (Warna Brand SiGaji) --}}
     <script>
         tailwind.config = {
@@ -57,6 +60,62 @@
         ::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
         [x-cloak] { display: none !important; }
     </style>
+
+    <script>
+        window.confirmModal = function({
+            title = 'Konfirmasi Tindakan',
+            text = 'Apakah Anda yakin ingin melanjutkan tindakan ini?',
+            icon = 'warning',
+            confirmText = 'Ya, Lanjutkan',
+            cancelText = 'Batal',
+            confirmColor = '#FF5A36',
+            formId = null,
+            onConfirm = null
+        }) {
+            Swal.fire({
+                title: title,
+                html: `<p class="text-sm text-gray-500 leading-relaxed">${text}</p>`,
+                icon: icon,
+                showCancelButton: true,
+                confirmButtonColor: confirmColor,
+                cancelButtonColor: '#9CA3AF',
+                confirmButtonText: confirmText,
+                cancelButtonText: cancelText,
+                reverseButtons: true,
+                padding: '1.75rem',
+                customClass: {
+                    popup: 'rounded-3xl shadow-2xl border border-gray-100 font-sans',
+                    title: 'text-xl font-bold text-gray-900',
+                    confirmButton: 'rounded-xl px-5 py-2.5 text-sm font-semibold shadow-md',
+                    cancelButton: 'rounded-xl px-5 py-2.5 text-sm font-semibold'
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    if (formId) {
+                        const form = document.getElementById(formId);
+                        if (form) form.submit();
+                    } else if (typeof onConfirm === 'function') {
+                        onConfirm();
+                    }
+                }
+            });
+        };
+
+        window.Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3500,
+            timerProgressBar: true,
+            customClass: {
+                popup: 'rounded-2xl shadow-xl font-sans'
+            },
+            didOpen: (toast) => {
+                toast.onmouseenter = Swal.stopTimer;
+                toast.onmouseleave = Swal.resumeTimer;
+            }
+        });
+    </script>
 </head>
 <body class="bg-gray-100 h-screen overflow-hidden" 
       x-data="{ 
@@ -113,5 +172,37 @@
     </div>
 
     @stack('scripts')
+
+    {{-- Flash Notifications via Toast --}}
+    @if(session('success'))
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                window.Toast.fire({
+                    icon: 'success',
+                    title: "{{ addslashes(session('success')) }}"
+                });
+            });
+        </script>
+    @endif
+    @if(session('error'))
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                window.Toast.fire({
+                    icon: 'error',
+                    title: "{{ addslashes(session('error')) }}"
+                });
+            });
+        </script>
+    @endif
+    @if($errors->any())
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                window.Toast.fire({
+                    icon: 'error',
+                    title: "{{ addslashes($errors->first()) }}"
+                });
+            });
+        </script>
+    @endif
 </body>
 </html>
